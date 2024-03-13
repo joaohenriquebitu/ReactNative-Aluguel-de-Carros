@@ -367,7 +367,8 @@ export default function Home() {
                       if (!isLoggedIn) {
                         navigation.navigate("Login");
                       } else {
-                        navigation.navigate("Rental");
+                        null
+                        // navigation.navigate("Rental");
                       }
                     }}
                   >
