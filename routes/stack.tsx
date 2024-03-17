@@ -8,9 +8,12 @@ import { View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { cor } from "../src/cor";
 import Landing from "../screens/Landing";
+import Account from "../screens/Account";
 import { useState } from "react";
 import { useEffect } from "react";
 import { useUser } from "../src/UserContext";
+import { PaperProvider } from "react-native-paper";
+import Rental from "../screens/Rental";
 const Stack = createNativeStackNavigator();
 
 type StackNavigation = {
@@ -43,12 +46,16 @@ export default function StackComponent() {
     >
       <StatusBar translucent={false} style="dark" backgroundColor="white" />
       <NavigationContainer>
+      
         <Stack.Navigator>
           <Stack.Screen options={options} name="Landing" component={Landing} />
+          <Stack.Screen options={options} name="Account" component={Account} />
           <Stack.Screen options={options} name="Home" component={Home} />
           <Stack.Screen options={options} name="SignUp" component={SignUp} />
           <Stack.Screen options={options} name="Login" component={Login} />
+          <Stack.Screen options={options} name="Rental" component={Rental} />
         </Stack.Navigator>
+        
       </NavigationContainer>
     </View>
   );

@@ -4,7 +4,7 @@ export const cor = {
   'button':'#40A2E3',
   'modalviewbackground' : "#9090ff",
   'loginbuttontext' : '#FFF6E9',
-  'pressableText' : '#5050ff',
+  'pressableText' : '#40A2E3',
   'cardsoutline' : '#40A2E3',
   'signoutbtn' : '#FF0000'
 };

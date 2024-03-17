@@ -1,28 +1,6 @@
-import {
-  Alert,
-  Platform,
-  RefreshControl,
-  ScrollView,
-  View,
-} from "react-native";
+import { Alert, Platform, RefreshControl, ScrollView, TouchableOpacity, View } from "react-native";
 import React from "react";
-import {
-  Button,
-  Card,
-  Icon,
-  IconButton,
-  Text,
-  Appbar,
-  Portal,
-  Modal,
-  PaperProvider,
-  List,
-  ActivityIndicator,
-  Drawer,
-  Menu,
-  Divider,
-  Surface,
-} from "react-native-paper";
+import { Button, Card, Icon, IconButton, Text, Appbar, Portal, Modal, PaperProvider, List, ActivityIndicator, Drawer, Menu, Divider, Surface } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import { useUser } from "../../src/UserContext";
 
@@ -35,10 +13,7 @@ import { auth } from "../../src/firebaseConfig";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
 async function verificarDisponibilidade(carId, novaInicio, novaFim) {
-  const reservasRef = query(
-    collection(db, "reservas"),
-    where("carId", "==", carId)
-  );
+  const reservasRef = query(collection(db, "reservas"), where("carId", "==", carId));
 
   const reservasSnapshot = await getDocs(reservasRef);
   console.log("carro: " + carId);
@@ -48,14 +23,7 @@ async function verificarDisponibilidade(carId, novaInicio, novaFim) {
     const inicioReserva = reserva.inicio.toDate();
     const fimReserva = reserva.fim.toDate();
 
-    console.log(
-      "reserva do " +
-        carId +
-        " encontrada de " +
-        inicioReserva +
-        " à " +
-        fimReserva
-    );
+    console.log("reserva do carro " + carId + " encontrada de " + inicioReserva + " à " + fimReserva);
     console.log("testando se " + novaInicio + " à " + novaFim + " colidem ");
 
     if (
@@ -82,11 +50,12 @@ export default function Home() {
   }, []);
 
   const [showAccount, setShowAccount] = useState(false);
-  const { isLoggedIn, userDoc, retiradaDate, entregaDate } = useUser();
+  const { isLoggedIn, userDoc, retiradaDate, entregaDate, filterAvailables, cars, setCars } = useUser();
   const [modalOn, setModalOn] = useState(false);
   const [loadingCars, setLoadingCars] = useState(true);
   const [carDetailed, setCarDetailed] = useState(0);
-  const [cars, setCars] = useState([]);
+  const [menuOn, setMenuOn] = useState(false);
+
   const [loadingStatus, setLoadingStatus] = useState("Carregando...");
 
   const loadAvailableCars = async () => {
@@ -100,20 +69,22 @@ export default function Home() {
       const availableCars = [];
       setLoadingStatus("Verificando Disponibilidade...");
       console.log(querySnapshot.size);
-      querySnapshot.size === 0
-        ? setError(
-            "Falha no acesso ao servidor, verifique sua conexão à internet."
-          )
-        : setError("Nenhum veículo disponível");
+      querySnapshot.size === 0 ? setError("Falha no acesso ao servidor, verifique sua conexão à internet.") : setError("Nenhum veículo disponível");
+
       for (const doc of querySnapshot.docs) {
         const car = doc.data();
-        if (
-          await verificarDisponibilidade(+doc.id, retiradaDate, entregaDate)
-        ) {
-          car.id = +doc.id;
-          availableCars.push(car);
+        if (car.available === false) {
+          car.status = "Indisponível";
+          if (filterAvailables === true) continue;
+        } else if (!(await verificarDisponibilidade(+doc.id, retiradaDate, entregaDate))) {
+          car.available = false;
+          car.status = "Já reservado";
+          if (filterAvailables === true) continue;
         }
+        car.id = +doc.id;
+        availableCars.push(car);
       }
+
       setCars(availableCars);
       console.log("cars data loaded");
     } catch (error) {
@@ -130,11 +101,7 @@ export default function Home() {
   return (
     <PaperProvider>
       <Portal>
-        <Modal
-          visible={modalOn}
-          onDismiss={() => setModalOn(false)}
-          style={{ justifyContent: "flex-end", flex: 1 }}
-        >
+        <Modal visible={modalOn} onDismiss={() => setModalOn(false)} style={{ justifyContent: "flex-end", flex: 1 }}>
           {cars[carDetailed] ? (
             <View
               style={{
@@ -144,11 +111,7 @@ export default function Home() {
                 borderTopRightRadius: 30,
               }}
             >
-              <Image
-                source={{ uri: cars[carDetailed].image }}
-                resizeMode="cover"
-                style={{ height: 240, marginTop: -130 }}
-              />
+              <Image source={{ uri: cars[carDetailed].image }} resizeMode="cover" style={{ height: 240, marginTop: -130 }} />
 
               <Text
                 variant="displaySmall"
@@ -168,70 +131,29 @@ export default function Home() {
                   backgroundColor: "rgba(0,0,0,0.1)",
                 }}
               >
-                <List.Item
-                  title={cars[carDetailed].maxPassengers + " Pessoas"}
-                  left={() => <List.Icon icon="account" />}
-                />
-
-                <List.Item
-                  title={cars[carDetailed].steering}
-                  left={() => <List.Icon icon="steering" />}
-                />
-                {cars[carDetailed].airbagCount !== 0 ? (
-                  <List.Item
-                    title={cars[carDetailed].airbagCount + " Airbags"}
-                    left={() => <List.Icon icon="airbag" />}
-                  />
-                ) : null}
-                <List.Item
-                  title={cars[carDetailed].trunkLiters + " Litros"}
-                  left={() => <List.Icon icon="bag-suitcase" />}
-                />
+                <List.Item title={cars[carDetailed].year} left={() => <List.Icon icon="calendar" />} />
+                <List.Item title={cars[carDetailed].maxPassengers + " Pessoas"} left={() => <List.Icon icon="account" />} />
+                <List.Item title={cars[carDetailed].steering} left={() => <List.Icon icon="steering" />} />
+                {cars[carDetailed].airbagCount !== 0 ? <List.Item title={cars[carDetailed].airbagCount + " Airbags"} left={() => <List.Icon icon="airbag" />} /> : null}
+                <List.Item title={cars[carDetailed].trunkLiters + " Litros"} left={() => <List.Icon icon="bag-suitcase" />} />
 
                 {cars[carDetailed].transmission == "Elétrico" ? (
                   <>
-                    <List.Item
-                      title={"Elétrico"}
-                      left={() => <List.Icon icon="flash" />}
-                    />
+                    <List.Item title={"Elétrico"} left={() => <List.Icon icon="flash" />} />
 
-                    <List.Item
-                      title={cars[carDetailed].numShifts + " Km Autonomia"}
-                      left={() => <List.Icon icon="battery-70" />}
-                    />
+                    <List.Item title={cars[carDetailed].numShifts + " Km Autonomia"} left={() => <List.Icon icon="battery-70" />} />
                   </>
                 ) : (
                   <>
-                    <List.Item
-                      title={cars[carDetailed].transmission}
-                      left={() => <List.Icon icon="cog" />}
-                    />
+                    <List.Item title={cars[carDetailed].transmission} left={() => <List.Icon icon="cogs" />} />
 
-                    <List.Item
-                      title={cars[carDetailed].numShifts + " Marchas"}
-                      left={() => <List.Icon icon="car-shift-pattern" />}
-                    />
+                    <List.Item title={cars[carDetailed].numShifts + " Marchas"} left={() => <List.Icon icon="car-shift-pattern" />} />
                   </>
                 )}
 
-                {cars[carDetailed].hasAC ? (
-                  <List.Item
-                    title={"Ar-Condicionado"}
-                    left={() => <List.Icon icon="snowflake" />}
-                  />
-                ) : null}
-                {cars[carDetailed].hasABS ? (
-                  <List.Item
-                    title={"Tem ABS"}
-                    left={() => <List.Icon icon="car-brake-abs" />}
-                  />
-                ) : null}
-                {cars[carDetailed].hasTCS ? (
-                  <List.Item
-                    title={"Controle de Tração"}
-                    left={() => <List.Icon icon="car-traction-control" />}
-                  />
-                ) : null}
+                {cars[carDetailed].hasAC ? <List.Item title={"Ar-Condicionado"} left={() => <List.Icon icon="snowflake" />} /> : null}
+                {cars[carDetailed].hasABS ? <List.Item title={"Tem ABS"} left={() => <List.Icon icon="car-brake-abs" />} /> : null}
+                {cars[carDetailed].hasTCS ? <List.Item title={"Controle de Tração"} left={() => <List.Icon icon="car-traction-control" />} /> : null}
               </View>
             </View>
           ) : null}
@@ -249,51 +171,34 @@ export default function Home() {
           <Appbar.Content title="Carros" />
 
           {isLoggedIn ? (
-            showAccount ? (
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  backgroundColor: "#d5d5d5",
-                  borderRadius: 50,
-                }}
-              >
-                <Appbar.Action
-                  icon="chevron-right"
-                  mode="contained"
-                  containerColor="#c0c0c0"
-                  onPress={() => {
-                    setShowAccount(false);
-                  }}
-                />
-
-                <Icon source="account" size={18} />
-
-                <Text
-                  style={{ fontSize: 18, marginBottom: 2 }}
-                  variant="bodyLarge"
-                >
-                  {userDoc.name}
-                </Text>
-                <Appbar.Action
-                  icon="logout"
-                  color={cor.signoutbtn}
-                  mode="contained"
-                  containerColor="#d5d5d5"
-                  onPress={() => {
-                    auth.signOut();
-                    setShowAccount(false);
-                  }}
-                />
-              </View>
-            ) : (
-              <Appbar.Action
-                icon="account"
+            <Menu
+              visible={menuOn}
+              onDismiss={() => setMenuOn(false)}
+              anchor={
+                <TouchableOpacity
+                activeOpacity={0.8}
+                style={{flexDirection:"row", backgroundColor:"rgba(0,0,0,0.2)", borderRadius:10, flex:0.8, alignItems:"center", paddingHorizontal:8, marginVertical:5}}
                 onPress={() => {
-                  setShowAccount(true);
+                  setMenuOn(true);
                 }}
-              />
-            )
+                >
+                <Icon
+                  size={25}
+                  source="account-circle-outline"
+                  
+                />
+                <Icon
+                  size={25}
+                  source="menu-down"
+                  
+                />
+                </TouchableOpacity>
+              }
+            >
+              <Menu.Item leadingIcon="account" onPress={() => {navigation.navigate("Account"); setMenuOn(false);}} title="Ver informações da conta" />
+              <Divider />
+              <Menu.Item leadingIcon="logout" onPress={()=>auth.signOut()} title="Sair" />
+            </Menu>
           ) : (
             <Button
               icon="account"
@@ -308,12 +213,7 @@ export default function Home() {
           )}
         </Appbar.Header>
 
-        <ScrollView
-          contentContainerStyle={styles.scrollView}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
+        <ScrollView contentContainerStyle={styles.scrollView} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
           {cars && cars.length > 0 && !loadingCars ? (
             cars.map((car) => (
               <Card
@@ -326,16 +226,20 @@ export default function Home() {
                   margin: 10,
                 }}
               >
-                <Card.Cover
-                  source={{ uri: car.image }}
-                  resizeMode={"center"}
-                  style={{ height: 140 }}
-                />
+                <Card.Cover source={{ uri: car.image }} resizeMode={"center"} style={{ height: 140 }} />
                 <Card.Content>
-                  <Text variant="titleLarge">
-                    {car.brand} {car.name}
-                  </Text>
-                  <Text variant="bodyMedium">R${car.cost}/dia</Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Text variant="titleLarge">
+                      {car.brand} {car.name}
+                    </Text>
+                    <Text variant="titleLarge">{car.year}</Text>
+                  </View>
+                  <Text variant="bodyMedium">{car.cost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 })}/dia</Text>
                 </Card.Content>
                 <View style={{ flexDirection: "row" }}>
                   <Button
@@ -344,13 +248,7 @@ export default function Home() {
                     style={styles.buttons}
                     icon="plus"
                     onPress={() => {
-                      console.log(
-                        "car: " +
-                          car.id +
-                          " index: " +
-                          cars.indexOf(car) +
-                          " details button pressed"
-                      );
+                      console.log("car: " + car.id + " index: " + cars.indexOf(car) + " details button pressed");
                       setCarDetailed(cars.indexOf(car));
                       setModalOn(true);
                     }}
@@ -367,12 +265,12 @@ export default function Home() {
                       if (!isLoggedIn) {
                         navigation.navigate("Login");
                       } else {
-                        null
-                        // navigation.navigate("Rental");
+                        null;
+                        navigation.navigate('Rental', { carSelected: cars.indexOf(car) });
                       }
                     }}
                   >
-                    {car.available ? "Reservar" : "Indisponível"}
+                    {car.available ? "Reservar" : car.status}
                   </Button>
                 </View>
               </Card>
@@ -390,30 +288,18 @@ export default function Home() {
             >
               {loadingCars ? (
                 <>
-                  <ActivityIndicator
-                    animating={true}
-                    color={"blue"}
-                    size={"large"}
-                  />
+                  <ActivityIndicator animating={true} color={"blue"} size={"large"} />
                   <Text>{loadingStatus}</Text>
                 </>
               ) : error === "No cars available" ? (
                 <>
-                  <IconButton
-                    icon="emoticon-sad-outline"
-                    color="red"
-                    size={40}
-                  />
-                  <Text style={{ textAlign: "center" }}>
-                    {"Não há veículos disponíveis para estas datas."}
-                  </Text>
+                  <IconButton icon="emoticon-sad-outline" color="red" size={40} />
+                  <Text style={{ textAlign: "center" }}>{"Não há veículos disponíveis para estas datas."}</Text>
                 </>
               ) : (
                 <>
                   <IconButton icon="alert-circle" color="red" size={40} />
-                  <Text style={{ color: "red", textAlign: "center" }}>
-                    {error}
-                  </Text>
+                  <Text style={{ color: "red", textAlign: "center" }}>{error}</Text>
                 </>
               )}
             </View>

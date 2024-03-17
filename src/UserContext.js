@@ -13,8 +13,8 @@ export const UserProvider = ({ children }) => {
   const [showAccount, setShowAccount] = useState(false);
   const [retiradaDate, setRetiradaDate] = useState(new Date());
   const [entregaDate, setEntregaDate] = useState(new Date());
-
-
+  const [filterAvailables, setFilterAvailables] = useState(false);
+  const [cars, setCars] = useState([]);
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setIsLoggedIn(!!user);
@@ -60,6 +60,8 @@ export const UserProvider = ({ children }) => {
   return (
     <UserContext.Provider
       value={{
+        filterAvailables,
+        setFilterAvailables,
         userDoc,
         updateUserDoc,
         isLoggedIn,
@@ -68,7 +70,9 @@ export const UserProvider = ({ children }) => {
         retiradaDate,
         setRetiradaDate,
         entregaDate,
-        setEntregaDate
+        setEntregaDate,
+        cars,
+        setCars,
       }}
     >
       {children}

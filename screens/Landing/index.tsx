@@ -18,88 +18,93 @@ import {
   Surface,
   BottomNavigation,
   TextInput,
+  Checkbox,
 } from "react-native-paper";
-import { CommonActions, useNavigation } from "@react-navigation/native";
+import { CommonActions, useFocusEffect, useNavigation } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useState, useEffect, useCallback } from "react";
-import { auth } from "../../src/firebaseConfig";
+import { auth, db } from "../../src/firebaseConfig";
 import { useUser } from "../../src/UserContext";
 import { StyleSheet } from "react-native";
 import { cor } from "../../src/cor";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import CardContent from "react-native-paper/lib/typescript/components/Card/CardContent";
 
 const Tab = createBottomTabNavigator();
 
+async function LoadUserReservations(userId, setReservations, setLoadingTimeout) {
+  setLoadingTimeout(false);
+  const userReservations = [];
+  const reservasRef = query(collection(db, "reservas"), where("userId", "==", userId));
+  const timeout = setTimeout(() => {
+    setLoadingTimeout(true);
+  }, 10000);
+  const reservasSnapshot = await getDocs(reservasRef);
+
+  for (const doc of reservasSnapshot.docs) {
+    const currentReservation = doc.data();
+    currentReservation.id = doc.id;
+    userReservations.push(currentReservation);
+  }
+  console.log(userReservations.length);
+  setReservations(userReservations);
+  clearTimeout(timeout);
+}
+
 export default function Landing() {
   const navigation = useNavigation();
   const { isLoggedIn, userDoc, showAccount, setShowAccount } = useUser();
+  const [menuOn, setMenuOn] = useState(false);
 
   useEffect(() => {}, []);
 
   return (
+    <PaperProvider>
     <View style={{ flex: 1 }}>
       <Appbar.Header style={{ backgroundColor: "white" }}>
         <Appbar.Content title="Aluga" />
 
         {isLoggedIn ? (
-          showAccount ? (
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                backgroundColor: "#d5d5d5",
-                borderRadius: 50,
-              }}
+            <Menu
+              visible={menuOn}
+              onDismiss={() => setMenuOn(false)}
+              anchor={<TouchableOpacity
+                activeOpacity={0.8}
+                style={{flexDirection:"row", backgroundColor:"rgba(0,0,0,0.2)", borderRadius:10, flex:0.8, alignItems:"center", paddingHorizontal:8, marginVertical:5}}
+                onPress={() => {
+                  setMenuOn(true);
+                }}
+                >
+                <Icon
+                  size={25}
+                  source="account-circle-outline"
+                  
+                />
+                <Icon
+                  size={25}
+                  source="menu-down"
+                  
+                />
+                </TouchableOpacity>
+              }
             >
-              <Appbar.Action
-                icon="chevron-right"
-                mode="contained"
-                containerColor="#c0c0c0"
-                onPress={() => {
-                  setShowAccount(false);
-                }}
-              />
-
-              <Icon source="account" size={18} />
-
-              <Text
-                style={{ fontSize: 18, marginBottom: 2 }}
-                variant="bodyLarge"
-              >
-                {userDoc.name}
-              </Text>
-              <Appbar.Action
-                icon="logout"
-                color={cor.signoutbtn}
-                mode="contained"
-                containerColor="#d5d5d5"
-                onPress={() => {
-                  auth.signOut();
-                  setShowAccount(false);
-                }}
-              />
-            </View>
+              <Menu.Item leadingIcon="account" onPress={() => {navigation.navigate("Account"); setMenuOn(false)}} title="Ver informações da conta" />
+              <Divider />
+              <Menu.Item leadingIcon="logout" onPress={()=>auth.signOut()} title="Sair" />
+            </Menu>
           ) : (
-            <Appbar.Action
+            <Button
               icon="account"
               onPress={() => {
-                setShowAccount(true);
+                navigation.navigate("Login");
               }}
-            />
-          )
-        ) : (
-          <Button
-            icon="account"
-            onPress={() => {
-              navigation.navigate("Login");
-            }}
-            textColor="white"
-            style={{ backgroundColor: "blue" }}
-          >
-            Log-in
-          </Button>
-        )}
+              textColor="white"
+              style={{ backgroundColor: "blue" }}
+            >
+              Log-in
+            </Button>
+          )}
       </Appbar.Header>
       <Tab.Navigator>
         <Tab.Screen
@@ -108,30 +113,26 @@ export default function Landing() {
           options={{
             headerShown: false,
             tabBarLabel: "Reservar",
-            tabBarIcon: ({ color, size }) => (
-              <Icon source="magnify" size={size} color={color} />
-            ),
+            tabBarIcon: ({ color, size }) => <Icon source="magnify" size={size} color={color} />,
           }}
         />
         <Tab.Screen
           name="Settings"
-          component={SettingsScreen}
+          component={ReservationsScreen}
           options={{
             headerShown: false,
             tabBarLabel: "Minhas reservas",
-            tabBarIcon: ({ color, size }) => (
-              <Icon source="car" size={size} color={color} />
-            ),
+            tabBarIcon: ({ color, size }) => <Icon source="car" size={size} color={color} />,
           }}
         />
       </Tab.Navigator>
     </View>
+  </PaperProvider>
   );
 }
 
 function HomeScreen() {
-  const { entregaDate, setEntregaDate, retiradaDate, setRetiradaDate } =
-    useUser();
+  const { entregaDate, setEntregaDate, retiradaDate, setRetiradaDate } = useUser();
   const [showEntregaPicker, setShowEntregaPicker] = useState(false);
   const [showRetiradaPicker, setShowRetiradaPicker] = useState(false);
 
@@ -147,7 +148,7 @@ function HomeScreen() {
     setEntregaDate(currentDate);
   };
 
-  const { setShowAccount } = useUser();
+  const { setShowAccount, filterAvailables, setFilterAvailables } = useUser();
   const navigation = useNavigation();
 
   return (
@@ -155,52 +156,35 @@ function HomeScreen() {
       <View style={styles.center}>
         <TouchableOpacity onPress={() => setShowRetiradaPicker(true)}>
           <Button>Data de Retirada</Button>
-          <TextInput
-            value={
-              retiradaDate.getDate() +
-              "/" +
-              (retiradaDate.getMonth() + 1) +
-              "/" +
-              retiradaDate.getFullYear()
-            }
-            editable={false}
-          ></TextInput>
+          <TextInput value={retiradaDate.getDate() + "/" + (retiradaDate.getMonth() + 1) + "/" + retiradaDate.getFullYear()} editable={false}></TextInput>
         </TouchableOpacity>
 
-        {showRetiradaPicker && (
-          <DateTimePicker
-            value={retiradaDate}
-            mode="date"
-            display="default"
-            onChange={onChangeRetirada}
-          />
-        )}
+        {showRetiradaPicker && <DateTimePicker value={retiradaDate} mode="date" display="default" onChange={onChangeRetirada} />}
 
         <TouchableOpacity onPress={() => setShowEntregaPicker(true)}>
           <Button>Data de Entrega</Button>
-          <TextInput
-            value={
-              entregaDate.getDate() +
-              "/" +
-              (retiradaDate.getMonth() + 1) +
-              "/" +
-              entregaDate.getFullYear()
-            }
-            editable={false}
-          ></TextInput>
+          <TextInput value={entregaDate.getDate() + "/" + (entregaDate.getMonth() + 1) + "/" + entregaDate.getFullYear()} editable={false}></TextInput>
         </TouchableOpacity>
 
-        {showEntregaPicker && (
-          <DateTimePicker
-            value={entregaDate}
-            mode="date"
-            display="default"
-            onChange={onChangeEntrega}
-          />
-        )}
+        {showEntregaPicker && <DateTimePicker value={entregaDate} mode="date" display="default" onChange={onChangeEntrega} />}
 
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginVertical: "5%",
+            backgroundColor: "rgba(0,0,0,0.1)",
+            borderRadius: 10,
+          }}
+          onPress={() => {
+            setFilterAvailables(!filterAvailables);
+          }}
+        >
+          <Checkbox status={filterAvailables ? "checked" : "unchecked"} />
+          <Text variant="bodyMedium">Mostrar apenas veículos disponíveis</Text>
+        </TouchableOpacity>
         <Button
-          style={{ marginTop: "10%" }}
           icon="car"
           mode="contained"
           onPress={() => {
@@ -215,40 +199,100 @@ function HomeScreen() {
   );
 }
 
-function SettingsScreen() {
+function ReservationsScreen() {
   const { isLoggedIn } = useUser();
+  const [reservations, setReservations] = useState([]);
+  const [loadingReservations, setLoadingReservations] = useState(true);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      const loadReservations = async () => {
+        setLoadingReservations(true);
+        console.log("loading reservations");
+        if (isLoggedIn) {
+          await LoadUserReservations(auth.currentUser.uid, setReservations, setLoadingTimeout);
+          console.log("Reservas loaded");
+        }
+        setLoadingReservations(false);
+      };
+      loadReservations();
+    }, [isLoggedIn])
+  );
+
   return (
     <View style={styles.container}>
       {isLoggedIn ? (
-        <Card
-          mode="elevated"
-          elevation={5}
-          style={{
-            borderWidth: 1,
-            borderColor: cor.cardsoutline,
-            margin: 10,
-          }}
-        >
-          <Card.Content>
-            <View style={{ flexDirection: "row" }}>
-              <View style={{ marginRight:10 }}>
-                <Icon size={24} source={"car"} />
-              </View>
-              <View
-                style={{ flex:1 }}
-              >
-                <Text variant="titleLarge">Marca e Nome    lembrar de colocar o número da placa nos atributos da tabela carro</Text>
-                <Text variant="bodyMedium">03/03/2020 - 10/10/2020</Text>
-                <Text variant="bodyMedium">R$20.20</Text>
-                <View
-                  style={{ flexDirection: "row", justifyContent: "flex-end" }}
-                >
-                  <Text variant="bodyMedium">ID: #000320030</Text>
+        !loadingReservations && reservations.length > 0 ? (
+          
+            reservations.map((reservation) => (
+              <Card
+              key={reservation.id}
+            mode="elevated"
+            elevation={5}
+            style={{
+              borderWidth: 1,
+              borderColor: cor.cardsoutline,
+              margin: 10,
+            }}
+          >
+              <Card.Content>
+                <View style={{ flexDirection: "row" }}>
+                  <View style={{ marginRight: 10 }}>
+                    <Icon size={24} source={"car"} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                      <Text variant="titleLarge">{reservation.carBrand + " " + reservation.carName}</Text>
+                      <View style={{ backgroundColor: "#c9c9c9", borderRadius: 5, borderColor: "#FF2020", borderWidth: 2 }}>
+                        <View style={{ backgroundColor: "blue", flexBasis: 8, borderTopLeftRadius: 2, borderTopRightRadius: 2, alignItems: "center" }}>
+                          <Text style={{ fontSize: 6, color: "white" }}>BRASIL</Text>
+                        </View>
+                        <Text style={{ fontWeight: "900", textAlignVertical: "bottom", paddingHorizontal: 6, color: "#FF2020" }}>{reservation.carPlate}</Text>
+                      </View>
+                    </View>
+                    <Text variant="bodyMedium">
+                      {reservation.inicio.toDate().toLocaleDateString()} - {reservation.fim.toDate().toLocaleDateString()}
+                    </Text>
+                    <Text variant="bodyMedium">{reservation.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 })}</Text>
+                    <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
+                      <Text variant="bodyMedium">ID: #{reservation.id}</Text>
+                    </View>
+                  </View>
                 </View>
-              </View>
-            </View>
-          </Card.Content>
-        </Card>
+              </Card.Content>
+              </Card>
+            ))
+          
+        ) : (
+          <View
+            style={{
+              alignItems: "center",
+              justifyContent: "space-evenly",
+              backgroundColor: "rgba(0,0,0,0.1)",
+              flexGrow: 0.15,
+              borderRadius: 50,
+              margin: "15%",
+            }}
+          >
+            {loadingReservations ? (
+              <>
+                <ActivityIndicator animating={true} color={"blue"} size={"large"} />
+                <Text>Carregando suas reservas...</Text>
+              </>
+            ) : loadingTimeout ? (
+              <>
+                <IconButton icon="alert-circle" iconColor="red" size={40} />
+                <Text style={{ color: "red", textAlign: "center" }}>Você está sem conexão à internet</Text>
+              </>
+            ) : (
+              <>
+                <IconButton icon="calendar-question" size={40} />
+                <Text style={{ textAlign: "center" }}>Você não fez nenhuma reserva</Text>
+              </>
+            )}
+          </View>
+        )
       ) : (
         <Text variant="headlineMedium">Faça Login para ver suas reservas!</Text>
       )}
@@ -258,7 +302,6 @@ function SettingsScreen() {
 
 const styles = StyleSheet.create({
   center: {
-    flex: 1,
     alignContent: "center",
     justifyContent: "center",
     margin: "3%",
@@ -266,5 +309,6 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
+    justifyContent: "center",
   },
 });

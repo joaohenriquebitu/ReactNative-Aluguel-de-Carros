@@ -124,6 +124,7 @@ export default function SignUp() {
               setDoc(userDoc, {
                 name: name,
                 surname: surname,
+                email: user,
                 phone: phone,
                 address: address,
                 cpf: cpf,
