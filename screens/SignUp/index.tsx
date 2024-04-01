@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { Button, TextInput, Appbar } from "react-native-paper";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { Button, TextInput, Appbar, Text } from "react-native-paper";
 import { cor } from "../../src/cor";
 import { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
@@ -17,7 +17,10 @@ import {
 import { db } from "../../src/firebaseConfig";
 import { Alert } from "react-native";
 import { useUser } from "../../src/UserContext";
-export default function SignUp() {
+import { StackNavigation, StackTypes } from "../../routes/stack";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+type propsType = NativeStackScreenProps<StackNavigation, "Rental">;
+export default function SignUp(props: propsType) {
   const [user, setUser] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -27,10 +30,10 @@ export default function SignUp() {
   const [cpf, setCpf] = useState("");
   const { updateUserDoc } = useUser();
 
-  const navigation = useNavigation();
+  const {navigation} = props;
   return (
     <View style={styles.container}>
-      <Appbar.Header>
+      <Appbar.Header style={{backgroundColor:cor.appbarbackground}}>
         <Appbar.BackAction onPress={navigation.goBack} />
         <Appbar.Content title="Cadastro" />
       </Appbar.Header>
@@ -88,14 +91,18 @@ export default function SignUp() {
             justifyContent: "center",
             flexDirection: "row",
             alignItems: "center",
-            marginBottom: "2%",
+
+            margin: "3%",
+            backgroundColor:cor.centerbackground,
+            borderRadius:10,
+            
             flexShrink: 0,
           }}
         >
-          <Text style={{ fontSize: 20 }}>Já tem uma conta? </Text>
+          <Text variant="titleMedium">Já tem uma conta? </Text>
           <Button
             textColor={cor.pressableText}
-            labelStyle={{ fontSize: 16 }}
+            labelStyle={{ fontSize: 15 }}
             icon="login"
             onPress={() => navigation.navigate("Login")}
           >
@@ -161,22 +168,23 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   buttons: {
-    margin: "2.5%",
+    margin: "3%",
     borderWidth: 3,
     borderColor: cor.button,
   },
   textInputs: {
     flex: 1,
-    margin: "3%",
+    marginHorizontal: "3.2%",
+    margin: "2%",
   },
   centerScroll: {
     flexShrink: 1,
     flexGrow: 0,
-    backgroundColor: cor.centerbackground,
+    backgroundColor: cor.background,
   },
   container: {
     flex: 1,
-    backgroundColor: cor.centerbackground,
+    backgroundColor: cor.background,
     justifyContent: "space-between",
   },
 });

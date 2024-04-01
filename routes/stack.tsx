@@ -1,5 +1,5 @@
 import { NavigationContainer } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { NativeStackNavigationProp, createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Login from "../screens/Login";
 import Home from "../screens/Home";
@@ -14,12 +14,23 @@ import { useEffect } from "react";
 import { useUser } from "../src/UserContext";
 import { PaperProvider } from "react-native-paper";
 import Rental from "../screens/Rental";
-const Stack = createNativeStackNavigator();
 
-type StackNavigation = {
+
+
+export type StackNavigation = {
   Home: undefined;
   Login: undefined;
+  Landing: undefined;
+  Account: undefined;
+  SignUp: undefined;
+  Rental: {
+    carSelected: string;
+  }
 };
+
+const Stack = createNativeStackNavigator<StackNavigation>();
+
+export type StackTypes = NativeStackNavigationProp<StackNavigation>;
 
 export default function StackComponent() {
   const { updateUserDoc } = useUser();
@@ -44,9 +55,8 @@ export default function StackComponent() {
         paddingRight: insets.right,
       }}
     >
-      <StatusBar translucent={false} style="dark" backgroundColor="white" />
+      <StatusBar translucent={false} style="dark" backgroundColor="#F0F0F0" />
       <NavigationContainer>
-      
         <Stack.Navigator>
           <Stack.Screen options={options} name="Landing" component={Landing} />
           <Stack.Screen options={options} name="Account" component={Account} />
@@ -55,7 +65,6 @@ export default function StackComponent() {
           <Stack.Screen options={options} name="Login" component={Login} />
           <Stack.Screen options={options} name="Rental" component={Rental} />
         </Stack.Navigator>
-        
       </NavigationContainer>
     </View>
   );

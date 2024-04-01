@@ -7,24 +7,29 @@ import { Appbar, Button, Checkbox, Divider, Icon, Menu, PaperProvider, RadioButt
 import { db } from "../../src/firebaseConfig";
 import { auth } from "../../src/firebaseConfig";
 import { collection, doc, setDoc } from "firebase/firestore";
+import { StackNavigation, StackTypes } from "../../routes/stack";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { cor } from "../../src/cor";
+type propsType = NativeStackScreenProps<StackNavigation, "Rental">;
 
-export default function Rental() {
+export default function Rental(props: propsType) {
   const { userDoc, retiradaDate, entregaDate, cars, isLoggedIn } = useUser();
-  const route = useRoute();
+  const {route, navigation} = props;
   const [menuOn, setMenuOn] = useState(false);
-  const [seguro, setSeguro] = useState(false);
-  const [seguroCost, setSeguroCost] = useState(0);
-  const [checkbox, setCheckbox] = useState<"checked" | "unchecked" | "indeterminate">("unchecked");
+  const [seguro, setSeguro] = useState(true);
   const { carSelected } = route.params;
-  const navigation = useNavigation();
+  const [checkbox, setCheckbox] = useState<"checked" | "unchecked" | "indeterminate">("unchecked");
   const dateDifference = () => {
     const differenceMs = entregaDate - retiradaDate;
     return Math.ceil(differenceMs / (1000 * 60 * 60 * 24));
   };
+  
+  const [seguroCost, setSeguroCost] = useState(0.1 * cars[carSelected].cost * dateDifference());
+  
   return (
     <PaperProvider>
-      <View style={{ flex: 1 }}>
-        <Appbar.Header style={{ backgroundColor: "white" }}>
+      <View style={{ flex: 1, backgroundColor:cor.rentbackground}}>
+        <Appbar.Header style={{backgroundColor:cor.appbarbackground}}>
           <Appbar.BackAction onPress={navigation.goBack}></Appbar.BackAction>
           <Appbar.Content title="Confirme sua reserva" />
 
@@ -71,8 +76,8 @@ export default function Rental() {
         </Appbar.Header>
 
         <ScrollView style={{ flex: 1 }}>
-          <View style={{ flex: 1, margin: 10, backgroundColor: "rgba(0,0,0,.2)", borderRadius: 30, padding: 9 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-evenly", alignItems: "center", borderRadius: 20,  }}>
+          <View style={{ flex: 1, margin: 10, backgroundColor: "white", borderRadius: 30, padding: 9 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-evenly", alignItems: "center", borderRadius: 20 }}>
               <Image source={{ uri: cars[carSelected].image }} resizeMode="contain" style={{ height: 100, width: 200 }} />
 
               <Text variant="titleLarge">{cars[carSelected].name + "\n" + cars[carSelected].year}</Text>
@@ -90,7 +95,7 @@ export default function Rental() {
               <View style={[styles.rows, { flexDirection: "column" }]}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <Text variant="bodyLarge">Seguro:</Text>
-                  <Text variant="bodyLarge">{seguroCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 })} (10%)</Text>
+                  <Text variant="bodyLarge">{seguroCost.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 })} (10%)</Text>
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
                   <RadioButton.Item
@@ -109,7 +114,7 @@ export default function Rental() {
                     label="Com seguro"
                     onPress={() => {
                       setSeguro(true);
-                      setSeguroCost(Math.floor((0.1 * cars[carSelected].cost)* 100) / 100);
+                      setSeguroCost(Math.floor(0.1 * cars[carSelected].cost * dateDifference() * 100) / 100);
                     }}
                     status={seguro ? "checked" : "unchecked"}
                   />
@@ -118,7 +123,7 @@ export default function Rental() {
 
               <View style={styles.mainRows}>
                 <Text variant="bodyLarge">Preço Total:</Text>
-                <Text variant="bodyLarge">{(cars[carSelected].cost * dateDifference() + seguroCost).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 })}</Text>
+                <Text variant="bodyLarge">{(cars[carSelected].cost * dateDifference() + seguroCost).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 })}</Text>
               </View>
             </View>
             <View style={{ backgroundColor: "rgba(0,0,0,.1)", padding: 10, borderRadius: 20, marginTop: 30 }}>
@@ -158,39 +163,36 @@ export default function Rental() {
                 onPress={() => setCheckbox(checkbox === "checked" ? "unchecked" : checkbox === "unchecked" ? "checked" : "unchecked")}
               />
 
-              <Button style={{ marginTop: 10 }} mode="contained" disabled={checkbox != "checked"}
-              
-              onPress={async()=>{
+              <Button
+                style={{ marginTop: 10 }}
+                icon={"file-sign"}
+                mode="contained"
+                buttonColor={cor.positive}
+                textColor="black"
+                disabled={checkbox != "checked"}
+                onPress={async () => {
+                  const numReserva = cars[carSelected].id + retiradaDate.toISOString().split("T")[0].replace(/-/g, "");
 
-                const numReserva = (cars[carSelected].id+retiradaDate.toISOString().split('T')[0].replace(/-/g, ''))
-
-
-
-                try {
-                  await setDoc(doc(db, "reservas", numReserva), {
-                    carBrand: cars[carSelected].brand,
-                    carId: cars[carSelected].id,
-                    carName: cars[carSelected].name,
-                    carPlate: cars[carSelected].plate,
-                    fim: entregaDate,
-                    inicio: retiradaDate,
-                    price: cars[carSelected].cost * dateDifference() + seguroCost,
-                    status: 'OK',
-                    userId: auth.currentUser.uid,
-                    hasInsurance: seguro
-                  });
-                  console.log('Reserva adicionada com sucesso!');
-                } catch (error) {
-                  console.error('Erro ao adicionar reserva:', error);
-                }
-                navigation.navigate("Landing");
-                console.log("reserva criada com id:" + numReserva);
-              }
-
-                
-              }
-              
-              
+                  try {
+                    await setDoc(doc(db, "reservas", numReserva), {
+                      carBrand: cars[carSelected].brand,
+                      carId: cars[carSelected].id,
+                      carName: cars[carSelected].name,
+                      carPlate: cars[carSelected].plate,
+                      fim: entregaDate,
+                      inicio: retiradaDate,
+                      price: cars[carSelected].cost * dateDifference() + seguroCost,
+                      status: "OK",
+                      userId: auth.currentUser.uid,
+                      hasInsurance: seguro,
+                    });
+                    console.log("Reserva adicionada com sucesso!");
+                  } catch (error) {
+                    console.error("Erro ao adicionar reserva:", error);
+                  }
+                  navigation.navigate("Landing");
+                  console.log("reserva criada com id:" + numReserva);
+                }}
               >
                 Reservar
               </Button>
@@ -214,7 +216,7 @@ const styles = StyleSheet.create({
   mainRows: {
     flexDirection: "row",
     justifyContent: "space-between",
-    backgroundColor: "rgba(0,255,0,.3)",
+    backgroundColor: cor.lightenedpositive,
     padding: 10,
     marginVertical: 4,
     borderRadius: 20,

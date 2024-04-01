@@ -4,12 +4,13 @@ import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-cont
 import { useUser } from "./src/UserContext";
 import { useEffect } from "react";
 import { auth } from "./src/firebaseConfig";
+import { Appearance } from "react-native";
 import { UserProvider } from "./src/UserContext";
 export default function App(){
 
+  useEffect(() => Appearance.setColorScheme('light'),
+  [])
 
-
-  
   return (
   <UserProvider>
   <SafeAreaProvider>

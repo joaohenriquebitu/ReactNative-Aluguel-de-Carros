@@ -1,4 +1,4 @@
-import { Platform, TouchableOpacity, View } from "react-native";
+import { Platform, ScrollView, TouchableOpacity, View } from "react-native";
 import React from "react";
 import {
   Button,
@@ -30,6 +30,10 @@ import { cor } from "../../src/cor";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import CardContent from "react-native-paper/lib/typescript/components/Card/CardContent";
+import { StackNavigation, StackTypes } from "../../routes/stack";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+
+type propsType = NativeStackScreenProps<StackNavigation, "Landing">;
 
 const Tab = createBottomTabNavigator();
 
@@ -52,46 +56,46 @@ async function LoadUserReservations(userId, setReservations, setLoadingTimeout) 
   clearTimeout(timeout);
 }
 
-export default function Landing() {
-  const navigation = useNavigation();
-  const { isLoggedIn, userDoc, showAccount, setShowAccount } = useUser();
+export default function Landing(props: propsType) {
+  const { navigation } = props;
+  const { isLoggedIn, userDoc } = useUser();
   const [menuOn, setMenuOn] = useState(false);
 
   useEffect(() => {}, []);
 
   return (
     <PaperProvider>
-    <View style={{ flex: 1 }}>
-      <Appbar.Header style={{ backgroundColor: "white" }}>
-        <Appbar.Content title="Aluga" />
+      <View style={{ flex: 1 }}>
+        <Appbar.Header style={{backgroundColor:cor.appbarbackground}}>
+          <Appbar.Content title="Aluga" />
 
-        {isLoggedIn ? (
+          {isLoggedIn ? (
             <Menu
               visible={menuOn}
               onDismiss={() => setMenuOn(false)}
-              anchor={<TouchableOpacity
-                activeOpacity={0.8}
-                style={{flexDirection:"row", backgroundColor:"rgba(0,0,0,0.2)", borderRadius:10, flex:0.8, alignItems:"center", paddingHorizontal:8, marginVertical:5}}
-                onPress={() => {
-                  setMenuOn(true);
-                }}
+              anchor={
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={{ flexDirection: "row", backgroundColor: "rgba(0,0,0,0.2)", borderRadius: 10, flex: 0.8, alignItems: "center", paddingHorizontal: 8, marginVertical: 5 }}
+                  onPress={() => {
+                    setMenuOn(true);
+                  }}
                 >
-                <Icon
-                  size={25}
-                  source="account-circle-outline"
-                  
-                />
-                <Icon
-                  size={25}
-                  source="menu-down"
-                  
-                />
+                  <Icon size={25} source="account-circle-outline" />
+                  <Icon size={25} source="menu-down" />
                 </TouchableOpacity>
               }
             >
-              <Menu.Item leadingIcon="account" onPress={() => {navigation.navigate("Account"); setMenuOn(false)}} title="Ver informações da conta" />
+              <Menu.Item
+                leadingIcon="account"
+                onPress={() => {
+                  navigation.navigate("Account");
+                  setMenuOn(false);
+                }}
+                title="Ver informações da conta"
+              />
               <Divider />
-              <Menu.Item leadingIcon="logout" onPress={()=>auth.signOut()} title="Sair" />
+              <Menu.Item leadingIcon="logout" onPress={() => auth.signOut()} title="Sair" />
             </Menu>
           ) : (
             <Button
@@ -105,29 +109,29 @@ export default function Landing() {
               Log-in
             </Button>
           )}
-      </Appbar.Header>
-      <Tab.Navigator>
-        <Tab.Screen
-          name="Alugar"
-          component={HomeScreen}
-          options={{
-            headerShown: false,
-            tabBarLabel: "Reservar",
-            tabBarIcon: ({ color, size }) => <Icon source="magnify" size={size} color={color} />,
-          }}
-        />
-        <Tab.Screen
-          name="Settings"
-          component={ReservationsScreen}
-          options={{
-            headerShown: false,
-            tabBarLabel: "Minhas reservas",
-            tabBarIcon: ({ color, size }) => <Icon source="car" size={size} color={color} />,
-          }}
-        />
-      </Tab.Navigator>
-    </View>
-  </PaperProvider>
+        </Appbar.Header>
+        <Tab.Navigator>
+          <Tab.Screen
+            name="Alugar"
+            component={HomeScreen}
+            options={{
+              headerShown: false,
+              tabBarLabel: "Reservar",
+              tabBarIcon: ({ color, size }) => <Icon source="magnify" size={size} color={color} />,
+            }}
+          />
+          <Tab.Screen
+            name="Settings"
+            component={ReservationsScreen}
+            options={{
+              headerShown: false,
+              tabBarLabel: "Minhas reservas",
+              tabBarIcon: ({ color, size }) => <Icon source="car" size={size} color={color} />,
+            }}
+          />
+        </Tab.Navigator>
+      </View>
+    </PaperProvider>
   );
 }
 
@@ -148,8 +152,8 @@ function HomeScreen() {
     setEntregaDate(currentDate);
   };
 
-  const { setShowAccount, filterAvailables, setFilterAvailables } = useUser();
-  const navigation = useNavigation();
+  const { filterAvailables, setFilterAvailables } = useUser();
+  const navigation = useNavigation<StackTypes>();
 
   return (
     <View style={styles.container}>
@@ -187,9 +191,9 @@ function HomeScreen() {
         <Button
           icon="car"
           mode="contained"
+          buttonColor={cor.button}
           onPress={() => {
             navigation.navigate("Home");
-            setShowAccount(false);
           }}
         >
           Ver carros disponíveis
@@ -221,21 +225,20 @@ function ReservationsScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.scrollView}>
       {isLoggedIn ? (
         !loadingReservations && reservations.length > 0 ? (
-          
-            reservations.map((reservation) => (
-              <Card
+          reservations.map((reservation) => (
+            <Card
               key={reservation.id}
-            mode="elevated"
-            elevation={5}
-            style={{
-              borderWidth: 1,
-              borderColor: cor.cardsoutline,
-              margin: 10,
-            }}
-          >
+              mode="elevated"
+              elevation={5}
+              style={{
+                borderWidth: 1,
+                borderColor: cor.cardsoutline,
+                margin: 10,
+              }}
+            >
               <Card.Content>
                 <View style={{ flexDirection: "row" }}>
                   <View style={{ marginRight: 10 }}>
@@ -254,16 +257,17 @@ function ReservationsScreen() {
                     <Text variant="bodyMedium">
                       {reservation.inicio.toDate().toLocaleDateString()} - {reservation.fim.toDate().toLocaleDateString()}
                     </Text>
-                    <Text variant="bodyMedium">{reservation.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 })}</Text>
-                    <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
+                    <Text>{reservation.hasInsurance ? "Com seguro " : "Sem Seguro"}</Text>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                      <Text variant="bodyMedium">{reservation.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 })}</Text>
+
                       <Text variant="bodyMedium">ID: #{reservation.id}</Text>
                     </View>
                   </View>
                 </View>
               </Card.Content>
-              </Card>
-            ))
-          
+            </Card>
+          ))
         ) : (
           <View
             style={{
@@ -277,7 +281,7 @@ function ReservationsScreen() {
           >
             {loadingReservations ? (
               <>
-                <ActivityIndicator animating={true} color={"blue"} size={"large"} />
+                <ActivityIndicator animating={true} color={cor.button} size={"large"} />
                 <Text>Carregando suas reservas...</Text>
               </>
             ) : loadingTimeout ? (
@@ -294,20 +298,42 @@ function ReservationsScreen() {
           </View>
         )
       ) : (
-        <Text variant="headlineMedium">Faça Login para ver suas reservas!</Text>
+        <View
+            style={{
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "rgba(0,0,0,0.1)",
+              flexGrow: 0.15,
+              borderRadius: 50,
+              margin: "2%",
+            }}
+          >
+        <Text style={{textAlign:"center"}} variant="headlineMedium">Faça Login para ver suas reservas!</Text>
+        </View>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  scrollView: {
+    backgroundColor: cor.lightbackground,
+    flexGrow: 1,
+    justifyContent: "center",
+  },
   center: {
     alignContent: "center",
     justifyContent: "center",
+    
+              backgroundColor: "rgba(0,0,0,0.1)",
+              flexGrow: 0.15,
+              borderRadius: 20,
+          padding: "3%",
     margin: "3%",
   },
 
   container: {
+    backgroundColor: cor.lightbackground,
     flex: 1,
     justifyContent: "center",
   },

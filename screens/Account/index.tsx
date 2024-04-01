@@ -7,10 +7,13 @@ import { useNavigation } from "@react-navigation/native";
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { cor } from "../../src/cor";
+import { StackNavigation, StackTypes } from "../../routes/stack";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+type propsType = NativeStackScreenProps<StackNavigation, "Account">;
 
-export default function Account() {
+export default function Account(props: propsType) {
   const { userDoc } = useUser();
-  const navigation = useNavigation();
+  const {navigation} = props;
   const [password, setPassword] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   return (
@@ -39,12 +42,14 @@ export default function Account() {
                     setModalVisible(false);
                     try {
                       await signInWithEmailAndPassword(auth, auth.currentUser.email, password);
+                      setPassword("");
                       await auth.currentUser.delete();
                       navigation.navigate("Landing");
+                      
                     } catch (error) {
                       Alert.alert("Erro na exclusão da conta", "Erro na exclusão da conta, verifique se sua senha está correta.\n" + error.message);
                     }
-                    setPassword("");
+                    
                   }}
                 >
                   Excluir
@@ -62,7 +67,7 @@ export default function Account() {
             </View>
           </Modal>
         </Portal>
-        <Appbar.Header>
+        <Appbar.Header style={{backgroundColor:cor.appbarbackground}}>
           <Appbar.BackAction onPress={navigation.goBack} />
           <Appbar.Content title="Informações da conta" />
         </Appbar.Header>

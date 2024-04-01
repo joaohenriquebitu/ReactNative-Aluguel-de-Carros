@@ -11,7 +11,9 @@ import { useState, useEffect, useCallback } from "react";
 import { db } from "../../src/firebaseConfig";
 import { auth } from "../../src/firebaseConfig";
 import { collection, query, where, getDocs } from "firebase/firestore";
-
+import { StackNavigation, StackTypes } from "../../routes/stack";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+type propsType = NativeStackScreenProps<StackNavigation, "Home">;
 async function verificarDisponibilidade(carId, novaInicio, novaFim) {
   const reservasRef = query(collection(db, "reservas"), where("carId", "==", carId));
 
@@ -40,8 +42,8 @@ async function verificarDisponibilidade(carId, novaInicio, novaFim) {
   return true;
 }
 
-export default function Home() {
-  const navigation = useNavigation();
+export default function Home(props: propsType) {
+  const {navigation} = props ;
 
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -49,7 +51,6 @@ export default function Home() {
     loadAvailableCars();
   }, []);
 
-  const [showAccount, setShowAccount] = useState(false);
   const { isLoggedIn, userDoc, retiradaDate, entregaDate, filterAvailables, cars, setCars } = useUser();
   const [modalOn, setModalOn] = useState(false);
   const [loadingCars, setLoadingCars] = useState(true);
@@ -69,7 +70,7 @@ export default function Home() {
       const availableCars = [];
       setLoadingStatus("Verificando Disponibilidade...");
       console.log(querySnapshot.size);
-      querySnapshot.size === 0 ? setError("Falha no acesso ao servidor, verifique sua conexão à internet.") : setError("Nenhum veículo disponível");
+      querySnapshot.size === 0 ? setError("Falha no acesso ao servidor, verifique sua conexão à internet.") : setError("Não há veículos disponíveis para estas datas.");
 
       for (const doc of querySnapshot.docs) {
         const car = doc.data();
@@ -141,13 +142,13 @@ export default function Home() {
                   <>
                     <List.Item title={"Elétrico"} left={() => <List.Icon icon="flash" />} />
 
-                    <List.Item title={cars[carDetailed].numShifts + " Km Autonomia"} left={() => <List.Icon icon="battery-70" />} />
+                    <List.Item title={cars[carDetailed].numGears + " Km Autonomia"} left={() => <List.Icon icon="battery-70" />} />
                   </>
                 ) : (
                   <>
                     <List.Item title={cars[carDetailed].transmission} left={() => <List.Icon icon="cogs" />} />
 
-                    <List.Item title={cars[carDetailed].numShifts + " Marchas"} left={() => <List.Icon icon="car-shift-pattern" />} />
+                    <List.Item title={cars[carDetailed].numGears + " Marchas"} left={() => <List.Icon icon="car-shift-pattern" />} />
                   </>
                 )}
 
@@ -160,7 +161,7 @@ export default function Home() {
         </Modal>
       </Portal>
       <View style={{ flex: 1 }}>
-        <Appbar.Header style={{ backgroundColor: "white" }}>
+        <Appbar.Header style={{backgroundColor:cor.appbarbackground}}>
           <Appbar.BackAction onPress={navigation.goBack}></Appbar.BackAction>
           <Appbar.Action
             icon="reload"
@@ -224,9 +225,10 @@ export default function Home() {
                   borderWidth: 1,
                   borderColor: cor.cardsoutline,
                   margin: 10,
+                  backgroundColor: cor.cardsbackground
                 }}
               >
-                <Card.Cover source={{ uri: car.image }} resizeMode={"center"} style={{ height: 140 }} />
+                <Card.Cover source={{ uri: car.image }} resizeMode={"center"} style={{ height: 140, backgroundColor:cor.cardsimagebackground }} />
                 <Card.Content>
                   <View
                     style={{
@@ -288,17 +290,17 @@ export default function Home() {
             >
               {loadingCars ? (
                 <>
-                  <ActivityIndicator animating={true} color={"blue"} size={"large"} />
+                  <ActivityIndicator animating={true} color={cor.button} size={"large"} />
                   <Text>{loadingStatus}</Text>
                 </>
-              ) : error === "No cars available" ? (
+              ) : error === "Não há veículos disponíveis para estas datas." ? (
                 <>
-                  <IconButton icon="emoticon-sad-outline" color="red" size={40} />
-                  <Text style={{ textAlign: "center" }}>{"Não há veículos disponíveis para estas datas."}</Text>
+                  <IconButton icon="emoticon-sad-outline" size={40} />
+                  <Text style={{ textAlign: "center" }}>{error}</Text>
                 </>
               ) : (
                 <>
-                  <IconButton icon="alert-circle" color="red" size={40} />
+                  <IconButton icon="alert-circle" size={40} />
                   <Text style={{ color: "red", textAlign: "center" }}>{error}</Text>
                 </>
               )}
@@ -314,6 +316,7 @@ const styles = StyleSheet.create({
   scrollView: {
     flexGrow: 1,
     justifyContent: "center",
+    backgroundColor:cor.homebackground
   },
   buttons: {
     margin: "2%",

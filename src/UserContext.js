@@ -65,8 +65,6 @@ export const UserProvider = ({ children }) => {
         userDoc,
         updateUserDoc,
         isLoggedIn,
-        showAccount,
-        setShowAccount,
         retiradaDate,
         setRetiradaDate,
         entregaDate,
