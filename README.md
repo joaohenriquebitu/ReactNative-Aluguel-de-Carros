@@ -1,6 +1,6 @@
-Project made for mobile programming course at University, it was made using Expo, and programmed in TypeScript.
+This project was developed for a Mobile Programming course at university. It was built using React Native with Expo and written in TypeScript.
 
-Google's Firebase Auth and Firestore Database was used through their mobile API as a database to save users and cars data.
+Firebase Authentication and Firestore Database were used via Firebase’s mobile SDK to handle user authentication and store users and cars data.
 
 <p>
   <img src="/screenshots/Screenshot%20(1).png?raw=true" width="150">
